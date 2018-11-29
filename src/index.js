@@ -1,6 +1,13 @@
 /*
-    1. Парсить информацию из стектрейса.
+    1. Парсить информацию из стектрейса. +++++
     2. В разных рантаймах стектрейсы разные (нужно будет это доделать)
+
+    1. Написать тесты
+
+    FIXME ПРОБЛЕМЫ
+    1. Spread оператор все портит.
+    2. Проксированый объект неполучается вызвать с оператором new (потому что он не является классом).
+    3. Как в рантайме определить фушкция это или класс // FIXME Reflect.ownKeys(Class) -> ["length", "prototype", "name"], но Reflect.ownKeys(function) -> ["length", "name", "arguments", "caller", "prototype"]
  */
 
 /*
@@ -12,17 +19,26 @@
 const { PROXY_GET_HISTORY, action_types } = require("./constants");
 
 function getStackTrace() {
-    const stack = new Error().stack.split("\n");
+    const stack = new Error().stack;
+
+    return parseStackTrace(stack);
+}
+
+function parseStackTrace(stack) {
+    if (typeof stack !== "string")
+        throw new Error("Wrong type of argument. Should be a string");
+
     const parsedStack = [];
 
-    stack.forEach(value => {
-        const result = /at ([a-zA-Z._<>]+) \((.+):(\d+):(\d+)\)/gm.exec(value); // for nodejs only FIXME need more tests
+    stack.split("\n").forEach(value => {
+        const result = /at ([a-zA-Z._<>]+) \((.+):(\d+):(\d+)\)/gm.exec(value); // for nodejs only FIXME need more tests with different stack traces
+
         if(result) {
             parsedStack.push({
                 functionName: result[1],
                 functionLocation: result[2],
-                line: result[3],
-                row: result[4]
+                line: +result[3],
+                row: +result[4]
             });
         }
     });
@@ -34,7 +50,8 @@ function getPathSaver(target) {
 
     const history = [];
     const proxyHandler = {
-        construct(fakeTarget, args) {
+        construct(fakeTarget, args) { // FIXME чекать является ли target конструктором (функция тоже не подходит)
+
             const result = Reflect.construct(target, args);
 
             history.push({
@@ -46,7 +63,7 @@ function getPathSaver(target) {
 
             return result;
         },
-        apply(fakeTarget, thisArg, args) {
+        apply(fakeTarget, thisArg, args) { // FIXME чекать является ли target функцией (конструктор тоже не подходит)
 
             if (args.length === 1 && args[0] === PROXY_GET_HISTORY) {
                 return history;
@@ -196,12 +213,10 @@ function getPathSaver(target) {
     return Proxy.revocable(() => {}, proxyHandler).proxy;
 }
 
-const x = getPathSaver({ x: 12, y: 42, t: 76 });
-x.x
-x.o
-x.t
-x.qwe = 123;
-
-console.dir(x(PROXY_GET_HISTORY), {depth: 5});
-
-// console.log(getStackTrace());
+module.exports = {
+    getPathSaver,
+    getStackTrace,
+    parseStackTrace,
+    PROXY_GET_HISTORY,
+    action_types
+};
