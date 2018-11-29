@@ -1,4 +1,4 @@
-const { getPathSaver, parseStackTrace, PROXY_GET_HISTORY } = require("../src/index");
+const { parseStackTrace } = require("../src/stackTraceParser");
 
 const exampleData = {
     valid: `Error
