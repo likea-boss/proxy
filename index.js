@@ -1,5 +1,7 @@
-// 1 Массив проксей
-// 2 Массив путей
+/*
+    1. Парсить информацию из стектрейса.
+    2. В разных рантаймах стектрейсы разные (нужно будет это доделать)
+ */
 
 /*
 * Утилита для логирования всех действий с обьектом.
@@ -22,6 +24,8 @@ const action_types = {
     DELETE_PROPERTY: Symbol("DELETE_PROPERTY"),
     OWN_KEYS: Symbol("OWN_KEYS")
 };
+
+const PROXY_GET_HISTORY = Symbol("PROXY_GET_HISTORY");
 
 /*
     Формат истории
@@ -107,11 +111,51 @@ const action_types = {
 //     }
 // ];
 
-function getStackTrace() {
-    return new Error().stack;
-}
+/*
+    Формат распарсеного стектрейса
+ */
+/*
 
-const PROXY_GET_HISTORY = Symbol("PROXY_GET_HISTORY");
+`Error
+    at xt (/home/sysadmin/react/proxied-staff/index.js:296:12)
+    at y (/home/sysadmin/react/proxied-staff/index.js:300:12)
+    at Object.<anonymous> (/home/sysadmin/react/proxied-staff/index.js:303:13)
+    at Module._compile (internal/modules/cjs/loader.js:688:30)
+    at Object.Module._extensions..js (internal/modules/cjs/loader.js:699:10)
+    at Module.load (internal/modules/cjs/loader.js:598:32)
+    at tryModuleLoad (internal/modules/cjs/loader.js:537:12)
+    at Function.Module._load (internal/modules/cjs/loader.js:529:3)
+    at Function.Module.runMain (internal/modules/cjs/loader.js:741:12)
+    at startup (internal/bootstrap/node.js:285:19)`
+
+const example = [
+    {
+        functionName: "doSomething",
+        functionLocation: "/home/sysadmin/react/proxied-staff/index.js",
+        line: 296,
+        row: 12
+    }
+];
+*/
+
+function getStackTrace() {
+    const stack = new Error().stack.split("\n");
+    const parsedStack = [];
+
+    stack.forEach(value => {
+        const result = /at ([a-zA-Z._<>]+) \((.+):(\d+):(\d+)\)/gm.exec(value); // for nodejs only FIXME need more tests
+        if(result) {
+            parsedStack.push({
+                functionName: result[1],
+                functionLocation: result[2],
+                line: result[3],
+                row: result[4]
+            });
+        }
+    });
+
+    return parsedStack;
+}
 
 function getPathSaver(target) {
 
@@ -285,6 +329,6 @@ x.o
 x.t
 x.qwe = 123;
 
-console.log(x(PROXY_GET_HISTORY));
+console.dir(x(PROXY_GET_HISTORY), {depth: 5});
 
-console.log(getStackTrace());
+// console.log(getStackTrace());
